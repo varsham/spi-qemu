@@ -1,0 +1,4 @@
+# Add this line inside <qemu-src>/hw/misc/meson.build
+# (anywhere among the other system_ss.add(when: 'CONFIG_...', ...) lines)
+
+system_ss.add(when: 'CONFIG_SPI_WIRE', if_true: files('spi_wire.c'))

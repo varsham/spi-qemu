@@ -1,0 +1,5 @@
+# Append to <qemu-src>/hw/misc/Kconfig
+
+config SPI_WIRE
+    bool
+    default y if RISCV_VIRT

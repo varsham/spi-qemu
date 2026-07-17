@@ -1,0 +1,48 @@
+/*
+ * Changes to make in <qemu-src>/hw/riscv/virt.c to wire up the spi-wire
+ * device. This is written against the QEMU 11.0.0 API shape (matches
+ * `qemu-system-riscv64 --version` on this machine) -- if you check out a
+ * different tag, expect the surrounding code (not this logic) to look
+ * slightly different; match the existing style of nearby device-creation
+ * functions in the same file rather than copy-pasting blind.
+ *
+ * IMPORTANT: pick a genuinely free MMIO address. VIRT_SPI_WIRE_BASE below
+ * (0x10011000) sits just past VIRT_FW_CFG's tiny window in the memmap that
+ * was current as of QEMU 11.0.0 -- but that memmap has shifted between
+ * versions before. Before building, open the `virt_memmap[]` array near the
+ * top of virt.c in your checked-out source and confirm 0x10011000..0x10012000
+ * doesn't overlap any existing entry. If it does, just pick a free 4K gap
+ * and update VIRT_SPI_WIRE_BASE in both this file and your firmware headers
+ * to match.
+ */
+
+/* 1) Add near the other includes: */
+#include "hw/misc/spi_wire.h"
+
+/* 2) Add near the other VIRT_* memmap-adjacent constants: */
+#define VIRT_SPI_WIRE_BASE  0x10011000
+
+/* 3) Add a small creation helper (model it on an existing simple
+ *    create_*() function already in this file, e.g. the one for VIRT_TEST,
+ *    for the correct realize/error-handling idiom for your version): */
+static void create_spi_wire(void)
+{
+    DeviceState *dev = qdev_new(TYPE_SPI_WIRE);
+
+    sysbus_realize_and_unref(SYS_BUS_DEVICE(dev), &error_fatal);
+    sysbus_mmio_map(SYS_BUS_DEVICE(dev), 0, VIRT_SPI_WIRE_BASE);
+}
+
+/* 4) Call it once from virt_machine_init(), after the other create_*()
+ *    calls for always-present devices (e.g. right after the UART/RTC
+ *    creation calls): */
+    create_spi_wire();
+
+/*
+ * Deliberately NOT setting `chardev` or `role-master` here -- both are
+ * qdev properties on the device, so they're supplied per-instance on the
+ * QEMU command line with `-global spi-wire.chardev=...` and
+ * `-global spi-wire.role-master=...`. That's what lets the *same* compiled
+ * qemu-system-riscv64 binary serve as both the master-side and slave-side
+ * instance; only the CLI flags and the loaded firmware image differ.
+ */
