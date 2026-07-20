@@ -5,7 +5,9 @@ that stands in for an SPI wire" before touching any real target instance.
 
 Not real SPI: no modeled clock or chip-select line, whole-byte transfers
 only. See `common/spi_wire_regs.h` for the register map and
-`qemu-device/spi_wire.c` for the transfer protocol description.
+`qemu-device/spi_wire.c` for the transfer protocol description. See
+`ARCHITECTURE.md` for why this uses a chardev-backed socket between two
+QEMU processes instead of virtio or QEMU's in-process SSI bus.
 
 ## Layout
 
