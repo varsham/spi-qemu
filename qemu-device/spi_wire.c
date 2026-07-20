@@ -24,8 +24,8 @@
 
 #include "qemu/osdep.h"
 #include "hw/sysbus.h"
-#include "hw/qdev-properties.h"
-#include "hw/qdev-properties-system.h"
+#include "hw/core/qdev-properties.h"
+#include "hw/core/qdev-properties-system.h"
 #include "hw/misc/spi_wire.h"
 #include "hw/misc/spi_wire_regs.h"
 #include "chardev/char-fe.h"
@@ -127,10 +127,9 @@ static void spi_wire_realize(DeviceState *dev, Error **errp)
                               NULL, s, NULL, true);
 }
 
-static Property spi_wire_properties[] = {
+static const Property spi_wire_properties[] = {
     DEFINE_PROP_CHR("chardev", SPIWireState, chr),
     DEFINE_PROP_UINT8("role-master", SPIWireState, role_is_master, 0),
-    DEFINE_PROP_END_OF_LIST(),
 };
 
 static void spi_wire_init(Object *obj)
@@ -142,7 +141,7 @@ static void spi_wire_init(Object *obj)
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->mmio);
 }
 
-static void spi_wire_class_init(ObjectClass *klass, void *data)
+static void spi_wire_class_init(ObjectClass *klass, const void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
