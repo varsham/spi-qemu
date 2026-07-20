@@ -1,27 +1,28 @@
 #include <stdint.h>
 #include "uart.h"
-#include "spi_wire_regs.h"
-
-/* Must match VIRT_SPI_WIRE_BASE in the virt.c patch. */
-#define SPI_WIRE_BASE 0x10011000UL
-#define SPI_REG(off) (*(volatile uint32_t *)(SPI_WIRE_BASE + (off)))
+#include "spi_wire.h"
 
 void main(void)
 {
     uart_puts("master: starting\n");
 
-    uint8_t tx = 0x42;
-    SPI_REG(SPI_WIRE_REG_TXDATA) = tx;
-    SPI_REG(SPI_WIRE_REG_CTRL) = SPI_WIRE_CTRL_START;
+    static const uint8_t tx[4] = { 0x01, 0x02, 0x03, 0x04 };
+    static const uint8_t expected_rx[4] = { 0xAA, 0xBB, 0xCC, 0xDD };
+    uint8_t rx[4];
 
-    uart_puts("master: sent byte, waiting for reply\n");
+    spi_wire_master_transfer_buf(tx, rx, sizeof(tx));
 
-    while (!(SPI_REG(SPI_WIRE_REG_STATUS) & SPI_WIRE_STATUS_RX_FULL)) {
+    uart_puts("master: transfer done, checking reply\n");
+
+    int ok = 1;
+    for (unsigned i = 0; i < sizeof(rx); i++) {
+        if (rx[i] != expected_rx[i]) {
+            ok = 0;
+        }
     }
 
-    uint32_t rx = SPI_REG(SPI_WIRE_REG_RXDATA);
-    if (rx == 0xAA) {
-        uart_puts("master: got expected reply 0xAA\n");
+    if (ok) {
+        uart_puts("master: got expected 4-byte reply\n");
     } else {
         uart_puts("master: got UNEXPECTED reply\n");
     }

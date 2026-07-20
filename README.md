@@ -15,9 +15,15 @@ only. See `common/spi_wire_regs.h` for the register map and
   wire it into a QEMU source tree (`spi_wire.c`, `spi_wire.h`,
   `Kconfig.snippet`, `meson.build.snippet`, `virt.c.snippet`).
 - `firmware/` — bare-metal RISC-V firmware (`master/`, `slave/`, shared
-  `common/` boot code and UART driver), already built and verified to boot
-  standalone (prints over UART, then blocks waiting on the SPI device —
-  expected, since stock QEMU doesn't have the device yet).
+  `common/` boot code, UART driver, and `spi_wire.c`/`spi_wire.h` transfer
+  driver), already built and verified to boot standalone (prints over UART,
+  then blocks waiting on the SPI device — expected, since stock QEMU
+  doesn't have the device yet). `master`/`slave` now exchange a 4-byte
+  message via `spi_wire_master_transfer_buf()`/`spi_wire_slave_transfer_buf()`
+  instead of a single hardcoded byte, driven by single-byte
+  `spi_wire_{master,slave}_transfer_byte()` calls underneath — see
+  `firmware/common/spi_wire.h` for the API and a known ordering limitation
+  on the slave side.
 
 ## 1. Build a QEMU with the spi-wire device
 
@@ -133,14 +139,15 @@ connect will fail immediately since nothing is listening on that path yet.
 Terminal 1 (master):
 ```
 master: starting
-master: sent byte, waiting for reply
-master: got expected reply 0xAA
+master: transfer done, checking reply
+master: got expected 4-byte reply
 ```
 
 Terminal 2 (slave):
 ```
-slave: starting, pre-loading reply byte 0xAA
-slave: got expected byte 0x42 from master, replied 0xAA
+slave: starting
+slave: transfer done, checking bytes from master
+slave: got expected 4-byte sequence from master
 ```
 
 Both then spin forever (`for (;;) {}`) — use Ctrl-A X in each terminal to

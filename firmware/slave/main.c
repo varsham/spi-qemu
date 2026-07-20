@@ -1,27 +1,30 @@
 #include <stdint.h>
 #include "uart.h"
-#include "spi_wire_regs.h"
-
-/* Must match VIRT_SPI_WIRE_BASE in the virt.c patch. */
-#define SPI_WIRE_BASE 0x10011000UL
-#define SPI_REG(off) (*(volatile uint32_t *)(SPI_WIRE_BASE + (off)))
+#include "spi_wire.h"
 
 void main(void)
 {
-    uart_puts("slave: starting, pre-loading reply byte 0xAA\n");
+    uart_puts("slave: starting\n");
 
-    /* Slave never initiates -- it just makes sure TXDATA holds whatever
-     * it wants to shift out the next time the master starts a transfer. */
-    SPI_REG(SPI_WIRE_REG_TXDATA) = 0xAA;
+    static const uint8_t tx[4] = { 0xAA, 0xBB, 0xCC, 0xDD };
+    static const uint8_t expected_rx[4] = { 0x01, 0x02, 0x03, 0x04 };
+    uint8_t rx[4];
 
-    while (!(SPI_REG(SPI_WIRE_REG_STATUS) & SPI_WIRE_STATUS_RX_FULL)) {
+    spi_wire_slave_transfer_buf(tx, rx, sizeof(tx));
+
+    uart_puts("slave: transfer done, checking bytes from master\n");
+
+    int ok = 1;
+    for (unsigned i = 0; i < sizeof(rx); i++) {
+        if (rx[i] != expected_rx[i]) {
+            ok = 0;
+        }
     }
 
-    uint32_t rx = SPI_REG(SPI_WIRE_REG_RXDATA);
-    if (rx == 0x42) {
-        uart_puts("slave: got expected byte 0x42 from master, replied 0xAA\n");
+    if (ok) {
+        uart_puts("slave: got expected 4-byte sequence from master\n");
     } else {
-        uart_puts("slave: got UNEXPECTED byte from master\n");
+        uart_puts("slave: got UNEXPECTED bytes from master\n");
     }
 
     for (;;) {

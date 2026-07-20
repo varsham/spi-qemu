@@ -4,7 +4,7 @@ CFLAGS  = -march=rv64imac -mabi=lp64 -mcmodel=medany -nostdlib -ffreestanding -O
           -Icommon -I../common
 LDFLAGS = -T common/linker.ld -nostdlib
 
-COMMON_OBJS = common/start.o common/uart.o
+COMMON_OBJS = common/start.o common/uart.o common/spi_wire.o
 
 all: master.elf slave.elf
 
